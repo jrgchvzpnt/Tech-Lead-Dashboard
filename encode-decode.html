@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DevTools Dashboard - Lider Técnico</title>
+    
+    <!-- Librería Mermaid JS para diagramas -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    
+    <style>
+        :root {
+            --bg-main: #121212; --bg-card: #1e1e1e; --bg-input: #2d2d2d;
+            --text-main: #e0e0e0; --text-accent: #4ade80; --primary: #0d6efd;
+            --primary-hover: #0a58ca; --success: #198754; --success-hover: #146c43;
+            --danger: #dc3545; --danger-hover: #bb2d3b; --border: #444;
+        }
+
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+        }
+
+        .container {
+            background-color: var(--bg-card);
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        h2 { margin-top: 0; color: #fff; }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 5px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .tab {
+            padding: 10px 15px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            color: #888;
+            font-size: 14px;
+            font-weight: bold;
+            border-bottom: 3px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s;
+        }
+        .tab:hover { color: #fff; }
+        .tab.active {
+            color: var(--primary);
+            border-bottom: 3px solid var(--primary);
+        }
+
+        /* Layout */
+        .grid-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            transition: grid-template-columns 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .grid-layout { grid-template-columns: 1fr !important; }
+        }
+
+        .box { display: flex; flex-direction: column; gap: 8px; }
+        .header-box { display: flex; justify-content: space-between; align-items: center; }
+
+        textarea, #outputHtml, #outputMermaid {
+            width: 100%;
+            height: 500px; 
+            padding: 12px;
+            font-size: 14px;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        
+        textarea {
+            font-family: monospace;
+            color: var(--text-accent);
+            resize: vertical; 
+        }
+        textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.25);
+        }
+
+        /* Estilos específicos para vistas previas */
+        #outputHtml {
+            display: none;
+            overflow: auto;
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, sans-serif;
+        }
+        
+        /* Contenedor de Mermaid con soporte para Drag & Drop / Pan & Zoom */
+        #outputMermaid {
+            display: none; 
+            align-items: center;
+            justify-content: center;
+            background-color: #252525;
+            overflow: hidden; 
+            cursor: grab;
+            position: relative;
+        }
+        #outputMermaid:active { cursor: grabbing; }
+        #outputMermaid svg {
+            transform-origin: center;
+            max-width: none !important; 
+        }
+
+        #outputHtml h1, #outputHtml h2, #outputHtml h3 { margin-top: 0; color: #fff; border-bottom: 1px solid var(--border); padding-bottom: 5px; }
+        #outputHtml code { background-color: #111; padding: 2px 5px; border-radius: 4px; color: var(--text-accent); font-family: monospace; }
+        #outputHtml pre { background-color: #111; padding: 10px; border-radius: 6px; overflow-x: auto; border: 1px solid var(--border); }
+        #outputHtml pre code { background-color: transparent; padding: 0; color: #e0e0e0; }
+        #outputHtml blockquote { border-left: 4px solid var(--primary); margin: 0 0 10px 0; padding-left: 15px; color: #aaa; font-style: italic; }
+        #outputHtml a { color: var(--primary); text-decoration: none; }
+        #outputHtml a:hover { text-decoration: underline; }
+        #outputHtml ul, #outputHtml ol { margin-top: 0; padding-left: 20px; }
+        #outputHtml img { max-width: 100%; border-radius: 4px; }
+        
+        .metrics { font-size: 12px; color: #888; text-align: right; margin-top: -5px; }
+
+        /* Dropzone */
+        #dropZone {
+            border: 2px dashed var(--border);
+            padding: 40px;
+            text-align: center;
+            color: #888;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            background-color: var(--bg-input);
+        }
+        #dropZone.dragover {
+            border-color: var(--primary);
+            background-color: rgba(13, 110, 253, 0.1);
+            color: #fff;
+        }
+
+        /* Buttons */
+        .action-panel {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            padding: 15px 0;
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            background-color: #444;
+            transition: all 0.2s;
+        }
+        button:hover { background-color: #555; }
+        button.btn-primary { background-color: var(--primary); }
+        button.btn-primary:hover { background-color: var(--primary-hover); }
+        button.btn-success { background-color: var(--success); }
+        button.btn-success:hover { background-color: var(--success-hover); }
+        button.btn-danger { background-color: var(--danger); }
+        button.btn-danger:hover { background-color: var(--danger-hover); }
+
+        .btn-small { padding: 4px 10px; font-size: 12px; }
+
+        .error {
+            color: var(--danger);
+            font-size: 14px;
+            font-weight: bold;
+            display: none;
+            background-color: rgba(255, 107, 107, 0.1);
+            padding: 10px;
+            border-radius: 4px;
+            border-left: 4px solid var(--danger);
+            margin-top: 10px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .controls { display: none; }
+        .controls.active { display: flex; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>🛠️ Tech Lead Dashboard</h2>
+        
+        <!-- Pestañas -->
+        <div class="tabs">
+            <button class="tab active" onclick="changeTab('base64')">Base64</button>
+            <button class="tab" onclick="changeTab('jwt')">JWT</button>
+            <button class="tab" onclick="changeTab('json')">JSON</button>
+            <button class="tab" onclick="changeTab('sql')">SQL</button>
+            <button class="tab" onclick="changeTab('md')">Markdown</button>
+            <button class="tab" onclick="changeTab('mermaid')">Mermaid JS</button>
+            <button class="tab" onclick="changeTab('url')">URL En/Decode</button>
+            <button class="tab" onclick="changeTab('hash')">Hashes</button>
+            <button class="tab" onclick="changeTab('time')">Timestamps</button>
+            <button class="tab" onclick="changeTab('uuid')">UUID v4</button>
+            <button class="tab" onclick="changeTab('cases')">Casing</button>
+            <button class="tab" onclick="changeTab('file')">File ➔ Base64</button>
+        </div>
+
+        <div class="grid-layout" id="mainGrid">
+            <!-- Panel Izquierdo -->
+            <div class="box" id="inputContainer">
+                <div class="header-box">
+                    <label for="inputText"><strong>Entrada / Código:</strong></label>
+                    <button class="btn-danger btn-small" onclick="limpiarTodo()">Limpiar Todo</button>
+                </div>
+                <textarea id="inputText" placeholder="Escribe o pega aquí tu texto, JSON, SQL, Mermaid..." oninput="manejarEntrada()"></textarea>
+                <div id="textMetrics" class="metrics">0 Caracteres | 0.00 KB</div>
+                
+                <div id="dropZone" style="display: none;">
+                    Arrastra y suelta un archivo aquí<br><br>o haz clic para seleccionar
+                    <input type="file" id="fileInput" style="display: none;" onchange="procesarArchivo(this.files[0])">
+                </div>
+            </div>
+
+            <!-- Panel Derecho -->
+            <div class="box" id="outputContainer">
+                <div class="header-box">
+                    <label><strong>Resultado:</strong></label>
+                    <button id="btnCopiar" class="btn-success btn-small" onclick="copiarAlPortapapeles()">Copiar</button>
+                </div>
+                <!-- Textarea para resultados normales -->
+                <textarea id="outputText" readonly placeholder="El resultado aparecerá aquí..."></textarea>
+                <!-- Div para HTML (Markdown) -->
+                <div id="outputHtml"></div>
+                <!-- Div para gráficos (Mermaid) -->
+                <div id="outputMermaid"></div>
+            </div>
+        </div>
+
+        <div id="mensajeError" class="error"></div>
+
+        <!-- Paneles de Control -->
+        <div id="ctrl-base64" class="action-panel controls active">
+            <button class="btn-primary" onclick="ejecutar('base64Encode')">Codificar a Base64</button>
+            <button class="btn-primary" onclick="ejecutar('base64Decode')">Decodificar de Base64</button>
+        </div>
+
+        <div id="ctrl-jwt" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('jwtDecode')">Decodificar JWT</button>
+        </div>
+
+        <div id="ctrl-json" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('jsonFormat')">Formatear JSON</button>
+            <button class="btn-primary" onclick="ejecutar('jsonMinify')">Minificar JSON</button>
+        </div>
+
+        <div id="ctrl-sql" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('sqlFormat')">Formatear SQL</button>
+            <button class="btn-primary" onclick="ejecutar('sqlMinify')">Minificar SQL</button>
+        </div>
+
+        <div id="ctrl-md" class="action-panel controls">
+            <span style="color: #888; font-size: 14px; align-self: center;">👀 Vista previa de Markdown en tiempo real.</span>
+        </div>
+
+        <!-- Panel de control de Mermaid dividido por vistas -->
+        <div id="ctrl-mermaid" class="action-panel controls" style="justify-content: space-between; align-items: center;">
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-mer-code" class="btn-primary" onclick="setMermaidView('code')">📝 Escribir Código</button>
+                <button id="btn-mer-prev" onclick="setMermaidView('preview')">👁️ Ver Diagrama</button>
+            </div>
+            <div id="mer-zoom-controls" style="display: none; align-items: center; gap: 10px;">
+                <span style="color: #888; font-size: 12px; text-align: right; line-height: 1.2;">Scrollea para Zoom.<br>Arrastra para mover.</span>
+                <button class="btn-success btn-small" onclick="resetPanZoom()">Centrar Zoom</button>
+                <!-- Botón de Descarga PNG Nuevo -->
+                <button class="btn-primary btn-small" onclick="descargarMermaidPNG()">⬇️ Descargar PNG</button>
+            </div>
+        </div>
+
+        <div id="ctrl-url" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('urlEncode')">URL Encode</button>
+            <button class="btn-primary" onclick="ejecutar('urlDecode')">URL Decode</button>
+        </div>
+
+        <div id="ctrl-hash" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutarHash('SHA-1')">SHA-1</button>
+            <button class="btn-primary" onclick="ejecutarHash('SHA-256')">SHA-256</button>
+            <button class="btn-primary" onclick="ejecutarHash('SHA-512')">SHA-512</button>
+        </div>
+
+        <div id="ctrl-time" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('toEpoch')">Fecha a Epoch (Segundos)</button>
+            <button class="btn-primary" onclick="ejecutar('toEpochMs')">Fecha a Epoch (Ms)</button>
+            <button class="btn-primary" onclick="ejecutar('fromEpoch')">Epoch a Local</button>
+            <button class="btn-primary" onclick="ejecutar('fromEpochUTC')">Epoch a UTC</button>
+        </div>
+
+        <div id="ctrl-uuid" class="action-panel controls">
+            <button class="btn-primary" onclick="generarUUID(1)">1 UUID</button>
+            <button class="btn-primary" onclick="generarUUID(5)">5 UUIDs</button>
+            <button class="btn-primary" onclick="generarUUID(10)">10 UUIDs</button>
+        </div>
+
+        <div id="ctrl-cases" class="action-panel controls">
+            <button class="btn-primary" onclick="ejecutar('toCamel')">camelCase</button>
+            <button class="btn-primary" onclick="ejecutar('toSnake')">snake_case</button>
+            <button class="btn-primary" onclick="ejecutar('toKebab')">kebab-case</button>
+            <button class="btn-primary" onclick="ejecutar('toPascal')">PascalCase</button>
+        </div>
+
+        <div id="ctrl-file" class="action-panel controls">
+            <span style="color: #888; font-size: 14px; align-self: center;">El archivo se convertirá automáticamente a Base64 al arrastrarlo.</span>
+        </div>
+    </div>
+
+    <script>
+        // Inicializar Mermaid permitiendo estilos sueltos (colores personalizados) y base oscura
+        mermaid.initialize({ 
+            startOnLoad: false, 
+            theme: 'dark', 
+            securityLevel: 'loose', 
+            fontFamily: 'system-ui, -apple-system, sans-serif'
+        });
+
+        const DOM = {
+            input: document.getElementById('inputText'), 
+            output: document.getElementById('outputText'),
+            outputHtml: document.getElementById('outputHtml'),
+            outputMermaid: document.getElementById('outputMermaid'),
+            error: document.getElementById('mensajeError'), 
+            metrics: document.getElementById('textMetrics'),
+            dropZone: document.getElementById('dropZone'), 
+            fileInput: document.getElementById('fileInput'),
+            btnCopiar: document.getElementById('btnCopiar'),
+            grid: document.getElementById('mainGrid'),
+            inputCont: document.getElementById('inputContainer'),
+            outputCont: document.getElementById('outputContainer')
+        };
+
+        let currentTabId = 'base64';
+
+        // --- SISTEMA DE PAN & ZOOM PARA MERMAID ---
+        let pzState = { scale: 1, tx: 0, ty: 0, isDragging: false, startX: 0, startY: 0 };
+
+        function resetPanZoom() {
+            pzState = { scale: 1, tx: 0, ty: 0, isDragging: false, startX: 0, startY: 0 };
+            aplicarTransformacionSVG();
+        }
+
+        function aplicarTransformacionSVG(isWheel = false) {
+            const svg = DOM.outputMermaid.querySelector('svg');
+            if (svg) {
+                svg.style.transition = isWheel ? 'transform 0.15s ease-out' : 'none';
+                svg.style.transform = `translate(${pzState.tx}px, ${pzState.ty}px) scale(${pzState.scale})`;
+            }
+        }
+
+        DOM.outputMermaid.addEventListener('wheel', (e) => {
+            if (currentTabId !== 'mermaid') return;
+            e.preventDefault();
+            const zoomIntensity = 0.1;
+            if (e.deltaY < 0) pzState.scale += zoomIntensity;
+            else pzState.scale -= zoomIntensity;
+            
+            pzState.scale = Math.min(Math.max(0.1, pzState.scale), 5);
+            aplicarTransformacionSVG(true);
+        });
+
+        DOM.outputMermaid.addEventListener('mousedown', (e) => {
+            if (currentTabId !== 'mermaid' || !DOM.outputMermaid.querySelector('svg')) return;
+            pzState.isDragging = true;
+            pzState.startX = e.clientX - pzState.tx;
+            pzState.startY = e.clientY - pzState.ty;
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!pzState.isDragging) return;
+            e.preventDefault();
+            pzState.tx = e.clientX - pzState.startX;
+            pzState.ty = e.clientY - pzState.startY;
+            aplicarTransformacionSVG(false);
+        });
+
+        window.addEventListener('mouseup', () => { pzState.isDragging = false; });
+        // --- FIN SISTEMA DE PAN & ZOOM ---
+
+        // --- DESCARGAR MERMAID COMO PNG ---
+        function descargarMermaidPNG() {
+            const svg = DOM.outputMermaid.querySelector('svg');
+            if (!svg) {
+                mostrarError('No hay diagrama generado para descargar.');
+                return;
+            }
+
+            // Obtener el ancho y alto original del SVG desde el viewBox para ignorar el zoom del usuario
+            let width, height;
+            if (svg.viewBox && svg.viewBox.baseVal && svg.viewBox.baseVal.width > 0) {
+                width = svg.viewBox.baseVal.width;
+                height = svg.viewBox.baseVal.height;
+            } else {
+                // Fallback si no tiene viewBox
+                const bbox = svg.getBoundingClientRect();
+                width = bbox.width / pzState.scale;
+                height = bbox.height / pzState.scale;
+            }
+
+            // Clonar el SVG para no modificar la vista en pantalla
+            const svgClone = svg.cloneNode(true);
+            svgClone.style.transform = ''; 
+            svgClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+            // Convertir a string y luego a blob/dataUrl seguro
+            const svgData = new XMLSerializer().serializeToString(svgClone);
+            const img = new Image();
+            img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const scale = 2; // Multiplicador de resolución (Alta calidad)
+                
+                canvas.width = width * scale;
+                canvas.height = height * scale;
+                const ctx = canvas.getContext('2d');
+                
+                // Rellenar fondo con el color oscuro de la interfaz para que los textos blancos se vean bien
+                ctx.fillStyle = "#252525"; 
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Dibujar el SVG
+                ctx.scale(scale, scale);
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Exportar y Descargar
+                const pngUrl = canvas.toDataURL('image/png');
+                const enlace = document.createElement('a');
+                enlace.download = `diagrama-mermaid-${Date.now()}.png`;
+                enlace.href = pngUrl;
+                document.body.appendChild(enlace);
+                enlace.click();
+                document.body.removeChild(enlace);
+            };
+
+            img.onerror = () => {
+                mostrarError('⚠️ Ocurrió un error al intentar renderizar el diagrama a imagen PNG.');
+            };
+        }
+        // --- FIN DESCARGAR PNG ---
+
+
+        // --- MANEJO DE VISTAS (Pestañas y Sub-pestañas de Mermaid) ---
+        function setMermaidView(view) {
+            const btnCode = document.getElementById('btn-mer-code');
+            const btnPrev = document.getElementById('btn-mer-prev');
+            const zoomCtrl = document.getElementById('mer-zoom-controls');
+
+            DOM.grid.style.gridTemplateColumns = '1fr'; 
+
+            if (view === 'code') {
+                DOM.inputCont.style.display = 'flex';
+                DOM.outputCont.style.display = 'none';
+                btnCode.classList.add('btn-primary');
+                btnPrev.classList.remove('btn-primary');
+                zoomCtrl.style.display = 'none';
+            } else {
+                DOM.inputCont.style.display = 'none';
+                DOM.outputCont.style.display = 'flex';
+                btnCode.classList.remove('btn-primary');
+                btnPrev.classList.add('btn-primary');
+                zoomCtrl.style.display = 'flex';
+                
+                if (DOM.input.value.trim() !== '') {
+                    renderizarMermaid();
+                } else {
+                    DOM.outputMermaid.innerHTML = '<span style="color:#888;">El código está vacío...</span>';
+                }
+            }
+        }
+
+        function changeTab(tabName) {
+            currentTabId = tabName;
+            
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.controls').forEach(c => c.classList.remove('active'));
+            document.getElementById(`ctrl-${tabName}`).classList.add('active');
+
+            DOM.grid.style.gridTemplateColumns = '';
+            DOM.inputCont.style.display = 'flex';
+            DOM.outputCont.style.display = 'flex';
+
+            DOM.output.value = '';
+            DOM.outputHtml.innerHTML = '';
+            DOM.outputMermaid.innerHTML = '';
+            DOM.output.style.display = 'block';
+            DOM.outputHtml.style.display = 'none';
+            DOM.outputMermaid.style.display = 'none';
+
+            if (tabName === 'md') {
+                DOM.output.style.display = 'none';
+                DOM.outputHtml.style.display = 'block';
+                DOM.btnCopiar.style.display = 'none'; 
+                renderizarMarkdown(); 
+            } else if (tabName === 'mermaid') {
+                DOM.output.style.display = 'none';
+                DOM.outputMermaid.style.display = 'flex'; 
+                DOM.btnCopiar.style.display = 'none'; 
+                setMermaidView('code');
+            } else {
+                DOM.btnCopiar.style.display = 'block';
+            }
+
+            if (tabName === 'file') {
+                DOM.input.style.display = 'none'; DOM.metrics.style.display = 'none';
+                DOM.dropZone.style.display = 'block';
+            } else if (tabName === 'uuid') {
+                DOM.input.style.display = 'none'; DOM.metrics.style.display = 'none';
+                DOM.dropZone.style.display = 'none';
+                DOM.output.placeholder = 'Los UUIDs generados aparecerán aquí...';
+            } else {
+                DOM.input.style.display = 'block'; DOM.metrics.style.display = 'block';
+                DOM.dropZone.style.display = 'none'; DOM.output.placeholder = 'El resultado aparecerá aquí...';
+            }
+            mostrarError('');
+        }
+
+        function manejarEntrada() {
+            actualizarMetricas();
+            if (currentTabId === 'md') renderizarMarkdown();
+        }
+
+        async function renderizarMermaid() {
+            const texto = DOM.input.value.trim();
+            if (!texto) {
+                DOM.outputMermaid.innerHTML = '';
+                mostrarError('');
+                return;
+            }
+
+            try {
+                mostrarError('');
+                DOM.outputMermaid.innerHTML = '<span style="color:#888;">Generando gráfico...</span>';
+                
+                const uniqueId = `mermaid-${Date.now()}`;
+                const { svg } = await mermaid.render(uniqueId, texto);
+                
+                DOM.outputMermaid.innerHTML = svg;
+                resetPanZoom(); 
+                
+            } catch (e) {
+                DOM.outputMermaid.innerHTML = '';
+                mostrarError(`⚠️ Error en sintaxis de Mermaid:\n${e.message || 'Verifica el código ingresado.'}`);
+            }
+        }
+
+        // --- RESTO DE FUNCIONES (Markdown, Limpiar, Utilidades) ---
+        function renderizarMarkdown() {
+            let texto = DOM.input.value;
+            if (!texto) { DOM.outputHtml.innerHTML = ''; return; }
+
+            texto = texto.replace(/```([\s\S]*?)```/g, function(match, code) {
+                return '<pre><code>' + code.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</code></pre>';
+            });
+
+            texto = texto.replace(/^###### (.*$)/gim, '<h6>$1</h6>');
+            texto = texto.replace(/^##### (.*$)/gim, '<h5>$1</h5>');
+            texto = texto.replace(/^#### (.*$)/gim, '<h4>$1</h4>');
+            texto = texto.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+            texto = texto.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+            texto = texto.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+            texto = texto.replace(/\*\*(.*?)\*\*/gim, '<strong>$1</strong>');
+            texto = texto.replace(/\*(.*?)\*/gim, '<em>$1</em>');
+            texto = texto.replace(/!\[(.*?)\]\((.*?)\)/gim, "<img alt='$1' src='$2' />");
+            texto = texto.replace(/\[(.*?)\]\((.*?)\)/gim, "<a href='$2' target='_blank'>$1</a>");
+            texto = texto.replace(/`(.*?)`/gim, '<code>$1</code>');
+            texto = texto.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+            texto = texto.replace(/^\s*\- (.*$)/gim, '<ul><li>$1</li></ul>');
+            texto = texto.replace(/<\/ul>\n<ul>/g, '\n'); 
+            texto = texto.replace(/\n$/gim, '<br />');
+
+            DOM.outputHtml.innerHTML = texto;
+        }
+
+        function limpiarTodo() {
+            DOM.input.value = '';
+            DOM.output.value = '';
+            DOM.outputHtml.innerHTML = '';
+            DOM.outputMermaid.innerHTML = '';
+            resetPanZoom();
+            actualizarMetricas();
+            mostrarError('');
+            DOM.dropZone.innerHTML = `Arrastra y suelta un archivo aquí<br><br>o haz clic para seleccionar
+                    <input type="file" id="fileInput" style="display: none;" onchange="procesarArchivo(this.files[0])">`;
+            resetBtnCopiar();
+        }
+
+        function mostrarError(msg) {
+            if (msg) { DOM.error.textContent = msg; DOM.error.style.display = 'block'; DOM.output.value = ''; } 
+            else { DOM.error.style.display = 'none'; }
+        }
+
+        function actualizarMetricas() {
+            const bytes = new Blob([DOM.input.value]).size;
+            DOM.metrics.textContent = `${DOM.input.value.length} Caracteres | ${(bytes / 1024).toFixed(2)} KB`;
+        }
+
+        function resetBtnCopiar() { DOM.btnCopiar.textContent = 'Copiar'; DOM.btnCopiar.classList.replace('btn-primary', 'btn-success'); }
+        function copiarAlPortapapeles() {
+            if (!DOM.output.value) return;
+            navigator.clipboard.writeText(DOM.output.value).then(() => {
+                DOM.btnCopiar.textContent = '¡Copiado!'; DOM.btnCopiar.classList.replace('btn-success', 'btn-primary');
+                setTimeout(resetBtnCopiar, 2000);
+            });
+        }
+
+        const toWords = (str) => str.match(/[A-Z]{2,}(?=[A-Z][a-z]+[0-9]*|\b)|[A-Z]?[a-z]+[0-9]*|[A-Z]|[0-9]+/g) || [];
+
+        const Operaciones = {
+            base64Encode: (txt) => btoa(unescape(encodeURIComponent(txt))),
+            base64Decode: (txt) => decodeURIComponent(escape(atob(txt.trim()))),
+            urlEncode: (txt) => encodeURIComponent(txt),
+            urlDecode: (txt) => decodeURIComponent(txt),
+            jsonFormat: (txt) => JSON.stringify(JSON.parse(txt), null, 4),
+            jsonMinify: (txt) => JSON.stringify(JSON.parse(txt)),
+            sqlFormat: (txt) => {
+                const keywords = /\b(SELECT|FROM|WHERE|LEFT JOIN|RIGHT JOIN|INNER JOIN|FULL OUTER JOIN|JOIN|ON|AND|OR|ORDER BY|GROUP BY|HAVING|LIMIT|OFFSET|INSERT INTO|VALUES|UPDATE|SET|DELETE FROM)\b/gi;
+                let formatted = txt.replace(/\s+/g, ' ').replace(keywords, match => `\n${match.toUpperCase()}`);
+                formatted = formatted.replace(/\n(AND|OR|ON)\b/g, '\n  $1');
+                return formatted.trim();
+            },
+            sqlMinify: (txt) => txt.replace(/\s+/g, ' ').trim(),
+            jwtDecode: (txt) => {
+                const parts = txt.trim().split('.');
+                if (parts.length !== 3) throw new Error("Faltan segmentos del JWT.");
+                const dec = (str) => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/').padEnd(str.length + (4 - str.length % 4) % 4, '='))));
+                return JSON.stringify({ Header: JSON.parse(dec(parts[0])), Payload: JSON.parse(dec(parts[1])) }, null, 4);
+            },
+            toEpoch: (txt) => Math.floor(new Date(txt).getTime() / 1000).toString(),
+            toEpochMs: (txt) => new Date(txt).getTime().toString(),
+            fromEpoch: (txt) => {
+                let ms = Number(txt.trim());
+                if (ms < 10000000000) ms *= 1000;
+                return new Date(ms).toLocaleString();
+            },
+            fromEpochUTC: (txt) => {
+                let ms = Number(txt.trim());
+                if (ms < 10000000000) ms *= 1000;
+                return new Date(ms).toUTCString();
+            },
+            toCamel: (txt) => toWords(txt).map((x, i) => i === 0 ? x.toLowerCase() : x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(''),
+            toPascal: (txt) => toWords(txt).map(x => x.charAt(0).toUpperCase() + x.slice(1).toLowerCase()).join(''),
+            toSnake: (txt) => toWords(txt).map(x => x.toLowerCase()).join('_'),
+            toKebab: (txt) => toWords(txt).map(x => x.toLowerCase()).join('-')
+        };
+
+        function ejecutar(operacion) {
+            if (!DOM.input.value) return mostrarError('');
+            try { mostrarError(''); DOM.output.value = Operaciones[operacion](DOM.input.value); } 
+            catch (e) { mostrarError(`⚠️ Error: Entrada inválida para esta operación.`); }
+        }
+
+        function generarUUID(cantidad) {
+            mostrarError('');
+            let uuids = [];
+            for (let i = 0; i < cantidad; i++) uuids.push(crypto.randomUUID());
+            DOM.output.value = uuids.join('\n');
+        }
+
+        async function ejecutarHash(algoritmo) {
+            if (!DOM.input.value) return mostrarError('');
+            try {
+                mostrarError('');
+                const hashBuffer = await crypto.subtle.digest(algoritmo, new TextEncoder().encode(DOM.input.value));
+                DOM.output.value = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
+            } catch (e) { mostrarError(`⚠️ Error al generar el Hash.`); }
+        }
+
+        DOM.dropZone.addEventListener('click', () => DOM.fileInput.click());
+        ['dragover', 'dragleave', 'drop'].forEach(evt => DOM.dropZone.addEventListener(evt, e => {
+            e.preventDefault();
+            evt === 'dragover' ? DOM.dropZone.classList.add('dragover') : DOM.dropZone.classList.remove('dragover');
+            if (evt === 'drop' && e.dataTransfer.files.length) procesarArchivo(e.dataTransfer.files[0]);
+        }));
+
+        function procesarArchivo(file) {
+            if (!file) return;
+            DOM.dropZone.innerHTML = `Procesando: <strong>${file.name}</strong>...`;
+            const reader = new FileReader();
+            reader.onload = e => {
+                DOM.output.value = e.target.result.split(',')[1];
+                DOM.dropZone.innerHTML = `¡Archivo procesado!<br><strong>${file.name}</strong><br>Arrastra otro para cambiar.
+                <input type="file" id="fileInput" style="display: none;" onchange="procesarArchivo(this.files[0])">`;
+            };
+            reader.onerror = () => mostrarError("Error al leer el archivo.");
+            reader.readAsDataURL(file);
+        }
+    </script>
+</body>
+</html>
