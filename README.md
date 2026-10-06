@@ -1,5 +1,3 @@
-Aquí tienes un archivo README.md completo, estructurado y profesional, listo para que lo subas a tu repositorio (como GitHub, GitLab o Bitbucket) o lo compartas con tu equipo.
-
 🛠️ DevTools Dashboard - Navaja Suiza para Líderes Técnicos
 Una herramienta web de un solo archivo (.html), sin dependencias complejas y con tema oscuro nativo, diseñada específicamente para el día a día de Desarrolladores, Arquitectos y Líderes Técnicos.
 
